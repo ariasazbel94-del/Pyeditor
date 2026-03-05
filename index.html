@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyFactory Ultra — Intelligence Edition</title>
+    <title>PyFactory Intelligence — Fix & Correct</title>
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 
     <style>
-        :root { --bg: #08080a; --surface: #121217; --border: #2a2a35; --accent: #7c6aff; --green: #3dffa0; --text: #e8e8f0; --error: #ff5e7a; }
+        :root { --bg: #08080a; --surface: #121217; --border: #2a2a35; --accent: #7c6aff; --green: #3dffa0; --text: #e8e8f0; --error: #ff5e7a; --warn: #ffb86c; }
         body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         header { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface); height: 50px; }
         main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
@@ -24,60 +24,48 @@
         #codigo { color: transparent; background: transparent; caret-color: white; z-index: 1; resize: none; outline: none; white-space: pre; overflow: auto; }
         #highlighting { z-index: 0; pointer-events: none; white-space: pre; overflow: hidden; }
         
-        .output-section { flex: 0.8; background: #000; padding: 20px; overflow-y: auto; border-top: 1px solid var(--border); display: flex; gap: 20px; }
+        .output-section { flex: 0.8; background: #000; padding: 15px; overflow-y: auto; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
         .panel { flex: 1; display: flex; flex-direction: column; }
-        .panel-title { font-size: 0.7rem; color: #666; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        #consola, #diagnostico { font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; }
-        #consola { color: var(--green); }
-        #diagnostico { color: var(--text); }
+        #diagnostico { padding: 10px; border-radius: 8px; background: #1a1a24; font-family: 'JetBrains Mono', monospace; font-size: 12px; border-left: 4px solid var(--accent); margin-bottom: 10px; white-space: pre-wrap; }
+        #consola { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; }
         
-        .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; }
-        button { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.3s; font-size: 0.75rem; }
+        .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 100; flex-wrap: wrap; justify-content: flex-end; }
+        button { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.2s; font-size: 0.7rem; }
         .btn-run { background: var(--accent); color: white; }
-        .btn-analyze { background: #2a2a35; color: white; border: 1px solid var(--border); }
-        .btn-export { background: #ffffff; color: #000; }
+        .btn-export { background: #ffffff; color: #000; box-shadow: 0 4px 10px rgba(255,255,255,0.2); }
         
-        #loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .hidden { opacity: 0; pointer-events: none; transition: 0.5s; }
+        #loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: 0.5s; }
+        .hidden { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
 <div id="loading-overlay">
     <h2 style="color: var(--accent);">🐍 PyFactory Intelligence</h2>
-    <p>Iniciando analizador semántico...</p>
 </div>
 
 <header>
-    <div style="font-weight:800;">🐍 Py<span>Factory</span> <small style="font-size:0.5rem; opacity:0.5;">v2.0</small></div>
-    <div id="status" style="font-size:0.7rem; color:var(--green);">● ANALIZADOR LISTO</div>
+    <div style="font-weight:800;">🐍 Py<span>Factory</span></div>
+    <div id="status" style="font-size:0.7rem; color:var(--green);">● SISTEMA ACTIVO</div>
 </header>
 
 <main>
     <div class="editor-section">
-        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();"># Prueba errores aquí
+        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();"># Ejemplo con error
 x = 10
 if x > 5
-    print("Error de sintaxis arriba")
-</textarea>
+    print("Falta el dos puntos arriba")</textarea>
         <pre id="highlighting" aria-hidden="true"><code class="language-python" id="highlighting-content"></code></pre>
     </div>
     <div class="output-section">
-        <div class="panel">
-            <div class="panel-title">Salida de Ejecución</div>
-            <div id="consola">>>> Listo.</div>
-        </div>
-        <div class="panel" style="border-left: 1px solid #222; padding-left: 20px;">
-            <div class="panel-title">Diagnóstico Semántico</div>
-            <div id="diagnostico">Sin errores detectados.</div>
-        </div>
+        <div id="diagnostico">Inicia el motor para analizar...</div>
+        <div id="consola">>>> Consola lista.</div>
     </div>
 </main>
 
 <div class="controls">
-    <button class="btn-analyze" id="btn-analizar">🔍 ANALIZAR</button>
-    <button class="btn-export" onclick="exportarApp()">🚀 EXPORTAR</button>
-    <button class="btn-run" id="btn-ejecutar">EJECUTAR</button>
+    <button class="btn-export" onclick="exportarAppSeguro()">🚀 GENERAR HTML</button>
+    <button class="btn-run" id="btn-ejecutar">EJECUTAR Y CORREGIR</button>
 </div>
 
 <script type="py">
@@ -86,48 +74,40 @@ import sys, io, traceback, ast
 
 document.getElementById("loading-overlay").classList.add("hidden")
 
-def analizar_semantica(codigo):
-    diag = document.getElementById("diagnostico")
-    try:
-        # 1. Análisis Sintáctico (AST)
-        tree = ast.parse(codigo)
-        
-        # 2. Análisis Lógico Simple
-        errores_logicos = []
-        for node in ast.walk(tree):
-            # Ejemplo: Detectar asignaciones a nombres comunes sin usar
-            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
-                pass # Aquí se podrían añadir reglas complejas
-        
-        diag.style.color = "#3dffa0"
-        return "✅ Sintaxis correcta.\n✅ Estructura lógica válida."
-        
-    except SyntaxError as e:
-        diag.style.color = "#ff5e7a"
-        return f"❌ ERROR SINTÁCTICO:\nLínea {e.lineno}: {e.msg}\n-> {e.text.strip() if e.text else ''}"
-    except Exception as e:
-        diag.style.color = "#ffb86c"
-        return f"⚠️ AVISO:\n{str(e)}"
-
-@when("click", "#btn-analizar")
-def btn_analizar_click(event):
-    codigo = document.getElementById("codigo").value
-    document.getElementById("diagnostico").innerText = analizar_semantica(codigo)
+def sugerir_correccion(error_msg, linea_error):
+    # Diccionario de correcciones comunes
+    if "expected ':'" in error_msg:
+        return f"SUGERENCIA: Agrega ':' al final de la línea {linea_error}."
+    if "unexpected indent" in error_msg:
+        return f"SUGERENCIA: Revisa los espacios al inicio de la línea {linea_error}."
+    if "is not defined" in error_msg:
+        var_name = error_msg.split("'")[1]
+        return f"SUGERENCIA: Asegúrate de haber definido la variable '{var_name}' antes de usarla."
+    return "SUGERENCIA: Revisa la sintaxis general cerca de esta línea."
 
 @when("click", "#btn-ejecutar")
-def ejecutar(event):
+def ejecutar_con_analisis(event):
     codigo = document.getElementById("codigo").value
     consola = document.getElementById("consola")
     diag = document.getElementById("diagnostico")
     
-    # Auto-analizar antes de correr
-    diag.innerText = analizar_semantica(codigo)
-    
+    # 1. Análisis Previo
+    try:
+        ast.parse(codigo)
+        diag.style.borderLeftColor = "#3dffa0"
+        diag.innerHTML = "<span style='color:#3dffa0'>✅ Código limpio de errores sintácticos.</span>"
+    except SyntaxError as e:
+        diag.style.borderLeftColor = "#ff5e7a"
+        sugerencia = sugerir_correccion(e.msg, e.lineno)
+        diag.innerHTML = f"<span style='color:#ff5e7a'>❌ ERROR EN LÍNEA {e.lineno}:</span> {e.msg}\n<b style='color:#ffb86c'>{sugerencia}</b>"
+        return # Detenemos la ejecución si hay error grave
+
+    # 2. Ejecución
     buffer = io.StringIO()
     sys.stdout = buffer
     try:
         exec(codigo, {})
-        consola.innerText = buffer.getvalue() or "✓ Ejecución finalizada."
+        consola.innerText = buffer.getvalue() or "✓ Ejecutado correctamente."
     except Exception:
         consola.innerText = traceback.format_exc()
     finally:
@@ -144,10 +124,76 @@ def ejecutar(event):
         const ed = document.getElementById('codigo');
         const hi = document.getElementById('highlighting');
         hi.scrollTop = ed.scrollTop;
-        hi.scrollLeft = ed.scrollLeft;
     }
     updateView();
-    // La función exportarApp() sigue siendo la misma que la anterior...
+
+    // --- FUNCIÓN DE EXPORTACIÓN REFORZADA PARA MÓVILES ---
+    function exportarAppSeguro() {
+        const pyCode = document.getElementById('codigo').value;
+        const indent = pyCode.split('\n').map(l => '    ' + l).join('\n');
+        
+        const template = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Exportada</title>
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script>
+    <style>
+        body { background: #08080a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #121217; padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #2a2a35; border-top: 5px solid #7c6aff; width: 280px; }
+        #out { background: #000; padding: 15px; border-radius: 10px; margin-top: 15px; color: #3dffa0; font-family: monospace; font-size: 0.8rem; min-height: 40px; text-align: left; }
+        button { background: #7c6aff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>App Lista</h3>
+        <div id="out">>>></div>
+        <button id="b">EJECUTAR</button>
+    </div>
+    <script type="py">
+from pyscript import when, document
+import sys, io
+@when("click", "#b")
+def main(e):
+    out = document.querySelector("#out")
+    buf = io.StringIO()
+    sys.stdout = buf
+    try:
+${indent}
+        res = buf.getvalue()
+        out.innerText = res if res else "✓ Hecho"
+    except Exception as err:
+        out.innerText = str(err)
+<\/script>
+</body>
+</html>`;
+
+        try {
+            const blob = new Blob([template], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            // Forzar descarga en Android/Chrome
+            a.style.display = 'none';
+            a.href = url;
+            a.setAttribute('download', 'mi_app_python.html');
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Limpieza inmediata
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 100);
+            
+            alert("¡Archivo generado! Revisa tus descargas.");
+        } catch (e) {
+            alert("Error al exportar: " + e.message);
+        }
+    }
 </script>
 </body>
 </html>
