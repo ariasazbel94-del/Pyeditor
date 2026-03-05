@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PyFactory — AI Fix v3</title>
+<title>PyFactory v3.1 — Fast Load</title>
 
 <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
 <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -11,277 +11,120 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Space+Mono:wght@700&family=DM+Sans:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  --bg:       #07080d;
-  --s1:       #0d0e16;
-  --s2:       #12131e;
-  --s3:       #1c1d2e;
-  --border:   #2a2b42;
-  --accent:   #5f6fff;
-  --accent2:  #ff5fa0;
-  --green:    #2effa8;
-  --amber:    #ffb347;
-  --red:      #ff4d6d;
-  --blue:     #4dc9ff;
-  --text:     #d8d9f0;
-  --muted:    #5a5b7a;
-  --mono:     'JetBrains Mono', monospace;
-  --ui:       'DM Sans', sans-serif;
-}
-
+:root { --bg: #07080d; --s1: #0d0e16; --s2: #12131e; --accent: #5f6fff; --green: #2effa8; --red: #ff4d6d; --text: #d8d9f0; --muted: #5a5b7a; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-body {
-  font-family: var(--ui);
-  background: var(--bg);
-  color: var(--text);
-  height: 100vh;
-  display: grid;
-  grid-template-rows: 48px 1fr;
-  overflow: hidden;
-}
+/* Loader mejorado */
+#loader { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+.spinner { width: 40px; height: 40px; border: 4px solid var(--s1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#btn-forzar { display: none; margin-top: 20px; padding: 10px 20px; background: var(--s2); border: 1px solid var(--muted); color: white; border-radius: 8px; cursor: pointer; }
 
-/* HEADER */
-header {
-  background: var(--s1);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  gap: 16px;
-  z-index: 50;
-}
+header { background: var(--s1); height: 48px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #2a2b42; justify-content: space-between; }
+.logo { font-family: 'Space Mono'; font-size: 0.9rem; font-weight: 700; color: var(--accent); }
 
-.logo { font-family: 'Space Mono', monospace; font-size: 0.85rem; font-weight: 700; }
-.logo em { color: var(--accent); font-style: normal; }
-.logo-pip { background: linear-gradient(135deg, var(--accent), var(--accent2)); padding: 4px 8px; border-radius: 6px; margin-right: 5px; }
+main { flex: 1; display: grid; grid-template-columns: 1fr 320px; overflow: hidden; }
+.editor-container { position: relative; display: flex; background: var(--bg); }
+.gutter { width: 40px; background: var(--s1); color: var(--muted); text-align: right; padding: 16px 5px; font-family: monospace; font-size: 12px; line-height: 1.65; border-right: 1px solid #2a2b42; overflow: hidden; }
+#codigo, #highlighting { position: absolute; inset: 0 0 0 40px; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.65; border: none; outline: none; white-space: pre; tab-size: 4; }
+#codigo { background: transparent; color: transparent; caret-color: white; z-index: 2; resize: none; overflow: auto; }
+#highlighting { z-index: 1; pointer-events: none; overflow: hidden; }
 
-.status-box { flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 10px; font-family: var(--mono); font-size: 0.65rem; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.dot.ready { background: var(--green); box-shadow: 0 0 8px var(--green); }
-
-/* MAIN */
-main { display: grid; grid-template-columns: 1fr 350px; overflow: hidden; }
-
-/* EDITOR */
-.editor-wrap { display: flex; flex-direction: column; border-right: 1px solid var(--border); position: relative; }
-.editor-top { background: var(--s2); height: 36px; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
-
-.editor-body { flex: 1; position: relative; display: flex; overflow: hidden; background: var(--bg); }
-.gutter { background: var(--s2); border-right: 1px solid var(--border); padding: 16px 10px; text-align: right; color: var(--muted); font-family: var(--mono); font-size: 13px; line-height: 1.65; min-width: 45px; user-select: none; }
-
-#codigo {
-  position: absolute; inset: 0 0 0 45px;
-  background: transparent; color: transparent; caret-color: white;
-  padding: 16px; font-family: var(--mono); font-size: 13px; line-height: 1.65;
-  border: none; outline: none; resize: none; z-index: 2; white-space: pre; overflow: auto;
-}
-#highlighting {
-  position: absolute; inset: 0 0 0 45px;
-  padding: 16px; font-family: var(--mono); font-size: 13px; line-height: 1.65;
-  z-index: 1; pointer-events: none; white-space: pre; overflow: hidden;
-}
-
-.err-line { position: absolute; left: 45px; right: 0; background: rgba(255, 77, 109, 0.15); border-left: 3px solid var(--red); pointer-events: none; z-index: 3; display: none; }
-
-/* SIDEBAR */
-.sidebar { display: flex; flex-direction: column; background: var(--s1); border-left: 1px solid var(--border); }
-.diag-area { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-.card { background: var(--s2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 0.75rem; border-left: 4px solid var(--muted); }
-.card.error { border-left-color: var(--red); }
-.card.fix { border-left-color: var(--amber); }
+.sidebar { display: flex; flex-direction: column; background: var(--s1); border-left: 1px solid #2a2b42; }
+.diag-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.card { background: var(--s2); padding: 12px; border-radius: 8px; border-left: 3px solid var(--muted); font-size: 0.75rem; }
+.card.err { border-left-color: var(--red); }
 .card.ok { border-left-color: var(--green); }
-
-.btn-fix { width: 100%; margin-top: 10px; padding: 8px; background: var(--amber); color: black; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-family: var(--ui); font-size: 0.7rem; }
-
-.console { height: 160px; background: #000; border-top: 1px solid var(--border); padding: 10px; font-family: var(--mono); font-size: 0.75rem; color: var(--green); overflow-y: auto; white-space: pre-wrap; }
-
-.actions { padding: 15px; display: flex; gap: 10px; background: var(--s2); border-top: 1px solid var(--border); }
-.btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-family: var(--ui); font-size: 0.75rem; transition: 0.2s; }
+.console { height: 140px; background: #000; padding: 10px; color: var(--green); font-family: monospace; font-size: 0.75rem; overflow-y: auto; border-top: 1px solid #2a2b42; }
+.actions { padding: 12px; display: flex; gap: 8px; background: var(--s2); }
+.btn { flex: 1; padding: 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75rem; }
 .btn-run { background: var(--accent); color: white; }
-.btn-export { background: var(--s3); color: var(--text); border: 1px solid var(--border); }
-
-/* LOADING */
-#loader { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-#loader.hide { display: none; }
 </style>
 </head>
 <body>
 
 <div id="loader">
-  <div style="font-family:'Space Mono'; margin-bottom: 20px;">PyFACTORY <em>STATION</em></div>
-  <div style="width:150px; height:2px; background:#1c1d2e;"><div id="load-progress" style="width:0; height:100%; background:var(--accent); transition: 0.5s;"></div></div>
+    <div class="spinner"></div>
+    <div style="font-family: 'Space Mono'; font-size: 0.8rem;">INICIALIZANDO PYFACTORY...</div>
+    <button id="btn-forzar" onclick="quitarLoader()">FORZAR ENTRADA</button>
 </div>
 
 <header>
-  <div class="logo"><span class="logo-pip">🐍</span>Py<em>Factory</em></div>
-  <div class="status-box">
-    <div id="dot-status" class="dot"></div>
-    <span id="txt-status">CARGANDO...</span>
-  </div>
+    <div class="logo">🐍 PyFACTORY <small style="color:var(--muted); font-weight:400">v3.1</small></div>
+    <div id="status" style="font-size:0.6rem; color:var(--muted)">CONECTANDO...</div>
 </header>
 
 <main>
-  <div class="editor-wrap">
-    <div class="editor-top">main.py</div>
-    <div class="editor-body">
-      <div id="gutter" class="gutter">1</div>
-      <div class="err-line" id="err-marker"></div>
-      <textarea id="codigo" spellcheck="false" oninput="syncEditor()" onscroll="syncScroll()"># Bienvenido a v3
-import asyncio
-
-def saludar(nombre)
-    print(f"Hola {nombre}")
-
-saludar("Usuario")</textarea>
-      <pre id="highlighting"><code class="language-python" id="code-render"></code></pre>
+    <div class="editor-container">
+        <div id="gutter" class="gutter">1</div>
+        <textarea id="codigo" spellcheck="false" oninput="updateEditor()" onscroll="syncScroll()"># Código de prueba
+print("¡Motor listo!")</textarea>
+        <pre id="highlighting"><code class="language-python" id="code-render"></code></pre>
     </div>
-  </div>
 
-  <div class="sidebar">
-    <div class="diag-area" id="diag-content">
-      <div class="card">Listo para analizar...</div>
+    <div class="sidebar">
+        <div class="diag-body" id="diags">
+            <div class="card">Esperando ejecución...</div>
+        </div>
+        <div class="console" id="consola">>>></div>
+        <div class="actions">
+            <button class="btn btn-run" id="btn-run">EJECUTAR</button>
+        </div>
     </div>
-    <div class="console" id="consola">>>> Consola</div>
-    <div class="actions">
-      <button class="btn btn-export" onclick="exportarBase64()">🚀 EXPORTAR</button>
-      <button class="btn btn-run" id="btn-run">▶ EJECUTAR</button>
-    </div>
-  </div>
 </main>
 
 <script>
-function syncEditor() {
-  const code = document.getElementById('codigo').value;
-  document.getElementById('code-render').textContent = code;
-  Prism.highlightElement(document.getElementById('code-render'));
-  
-  const lines = code.split('\n').length;
-  document.getElementById('gutter').innerText = Array.from({length: lines}, (_, i) => i + 1).join('\n');
-  document.getElementById('err-marker').style.display = 'none';
+function updateEditor() {
+    const code = document.getElementById('codigo').value;
+    document.getElementById('code-render').textContent = code;
+    Prism.highlightElement(document.getElementById('code-render'));
+    const lines = code.split('\n').length;
+    document.getElementById('gutter').innerText = Array.from({length: lines}, (_, i) => i + 1).join('\n');
 }
-
 function syncScroll() {
-  const ta = document.getElementById('codigo');
-  document.getElementById('highlighting').scrollTop = ta.scrollTop;
-  document.getElementById('highlighting').scrollLeft = ta.scrollLeft;
-  document.getElementById('gutter').scrollTop = ta.scrollTop;
+    const ta = document.getElementById('codigo');
+    document.getElementById('highlighting').scrollTop = ta.scrollTop;
+    document.getElementById('gutter').scrollTop = ta.scrollTop;
 }
-
-function exportarBase64() {
-  const code = document.getElementById('codigo').value;
-  const encoded = btoa(unescape(encodeURIComponent(code)));
-  
-  const template = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script><style>body{background:#07080d;color:#d8d9f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.card{background:#0d0e16;padding:30px;border-radius:20px;border-top:5px solid #5f6fff;width:320px;text-align:center}#out{background:#000;padding:15px;border-radius:10px;margin:20px 0;color:#2effa8;font-family:monospace;min-height:60px;text-align:left;white-space:pre-wrap}button{width:100%;padding:12px;background:#5f6fff;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer}<\/style></head><body><div class="card"><h3>PyFactory App</h3><div id="out">>>></div><button id="b">EJECUTAR</button></div><script type="py">from pyscript import when,document\\nimport base64,sys,io\\n@when("click","#b")\\ndef r(e):\\n buf=io.StringIO();sys.stdout=buf\\n try:\\n  exec(base64.b64decode("${encoded}").decode("utf-8"),{})\\n  document.getElementById("out").innerText=buf.getvalue() or "✓"\\n except Exception as err: document.getElementById("out").innerText=str(err)\\n<\/script></body></html>`;
-
-  const blob = new Blob([template], {type:'text/html'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'mi_app.html';
-  a.click();
+function quitarLoader() {
+    document.getElementById('loader').style.opacity = '0';
+    setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
 }
-
-// Inicialización
-setTimeout(syncEditor, 500);
+// Si en 6 segundos no ha cargado, mostrar botón de emergencia
+setTimeout(() => {
+    if(document.getElementById('loader').style.display !== 'none') {
+        document.getElementById('btn-forzar').style.display = 'block';
+    }
+}, 6000);
+updateEditor();
 </script>
 
 <script type="py">
 from pyscript import window, document, when
-import sys, io, ast, traceback
-
-_namespace = {}
-_fix_cache = None
-
-def set_ui_status(state, text):
-    dot = document.getElementById("dot-status")
-    txt = document.getElementById("txt-status")
-    dot.className = f"dot {state}"
-    txt.innerText = text
+import sys, io
 
 @when("click", "#btn-run")
-def ejecutar(event):
-    global _fix_cache
-    codigo = document.getElementById("codigo").value
-    diag = document.getElementById("diag-content")
+def run_code(event):
+    code = document.getElementById("codigo").value
     consola = document.getElementById("consola")
-    
-    diag.innerHTML = ""
-    consola.innerText = ">>>"
-    set_ui_status("ready", "ANALIZANDO...")
-
-    # 1. Chequeo de Sintaxis e IA Fix
-    try:
-        ast.parse(codigo)
-    except SyntaxError as e:
-        l_idx = (e.lineno or 1) - 1
-        # Mostrar marca roja
-        marker = document.getElementById("err-marker")
-        marker.style.top = f"{16 + (l_idx * 13 * 1.65)}px"
-        marker.style.height = "21px"
-        marker.style.display = "block"
-
-        card = document.createElement("div")
-        card.className = "card error"
-        card.innerHTML = f"<b>SyntaxError L{e.lineno}</b><br>{e.msg}"
-        diag.appendChild(card)
-
-        # Lógica de Corrección
-        nuevo = None
-        lineas = codigo.split('\n')
-        if "expected ':'" in e.msg:
-            lineas[l_idx] = lineas[l_idx].rstrip() + ":"
-            nuevo = "\n".join(lineas)
-        elif "indent" in e.msg:
-            lineas[l_idx] = "    " + lineas[l_idx].lstrip()
-            nuevo = "\n".join(lineas)
-
-        if nuevo:
-            _fix_cache = nuevo
-            fcard = document.createElement("div")
-            fcard.className = "card fix"
-            fcard.innerHTML = "<b>Sugerencia de IA</b><br>Se detectó el problema."
-            btn = document.createElement("button")
-            btn.className = "btn-fix"
-            btn.innerText = "🔧 APLICAR CORRECCIÓN"
-            btn.onclick = aplicar_fix_js
-            fcard.appendChild(btn)
-            diag.appendChild(fcard)
-
-        set_ui_status("ready", "ERROR")
-        return
-
-    # 2. Ejecución Real
     buf = io.StringIO()
     sys.stdout = buf
     try:
-        exec(codigo, _namespace)
-        consola.innerText = buf.getvalue() or "✓ Ejecutado sin salida."
-        card = document.createElement("div")
-        card.className = "card ok"
-        card.innerHTML = "<b>Éxito</b><br>Código verificado."
-        diag.appendChild(card)
-    except Exception:
-        consola.innerText = traceback.format_exc()
+        exec(code, {})
+        consola.innerText = buf.getvalue() or "✓"
+    except Exception as e:
+        consola.innerText = str(e)
     finally:
         sys.stdout = sys.__stdout__
-    
-    set_ui_status("ready", "ONLINE")
 
-def aplicar_fix_js(event):
-    global _fix_cache
-    if _fix_cache:
-        document.getElementById("codigo").value = _fix_cache
-        window.syncEditor()
-        document.getElementById("diag-content").innerHTML = '<div class="card ok">Corregido. Ejecuta de nuevo.</div>'
-
-# Quitar loader
-document.getElementById("load-progress").style.width = "100%"
-window.setTimeout(lambda: document.getElementById("loader").classList.add("hide"), 800)
-set_ui_status("ready", "ONLINE")
+# Al terminar de cargar este bloque, quitamos el loader
+window.quitarLoader()
+document.getElementById("status").innerText = "ONLINE"
+document.getElementById("status").style.color = "#2effa8"
 </script>
 
 </body>
