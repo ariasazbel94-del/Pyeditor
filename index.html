@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyFactory Intelligence — Fix & Correct</title>
+    <title>PyFactory Intelligence — Auto-Fix Edition</title>
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -14,7 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 
     <style>
-        :root { --bg: #08080a; --surface: #121217; --border: #2a2a35; --accent: #7c6aff; --green: #3dffa0; --text: #e8e8f0; --error: #ff5e7a; --warn: #ffb86c; }
+        :root { --bg: #08080a; --surface: #121217; --border: #2a2a35; --accent: #7c6aff; --green: #3dffa0; --text: #e8e8f0; --error: #ff5e7a; --fix: #ffb86c; }
         body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         header { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface); height: 50px; }
         main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
@@ -24,94 +24,120 @@
         #codigo { color: transparent; background: transparent; caret-color: white; z-index: 1; resize: none; outline: none; white-space: pre; overflow: auto; }
         #highlighting { z-index: 0; pointer-events: none; white-space: pre; overflow: hidden; }
         
-        .output-section { flex: 0.8; background: #000; padding: 15px; overflow-y: auto; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
-        .panel { flex: 1; display: flex; flex-direction: column; }
-        #diagnostico { padding: 10px; border-radius: 8px; background: #1a1a24; font-family: 'JetBrains Mono', monospace; font-size: 12px; border-left: 4px solid var(--accent); margin-bottom: 10px; white-space: pre-wrap; }
-        #consola { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; }
+        .output-section { flex: 0.8; background: #000; padding: 15px; overflow-y: auto; border-top: 1px solid var(--border); }
         
-        .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 100; flex-wrap: wrap; justify-content: flex-end; }
-        button { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.2s; font-size: 0.7rem; }
+        /* Estilo del Panel de Diagnóstico con Botón */
+        #diagnostico-container { background: #1a1a24; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px; }
+        #diag-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; }
+        #btn-corregir-ui { display: none; background: var(--fix); color: black; border: none; padding: 8px 12px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 10px; align-self: flex-start; text-transform: uppercase; }
+        
+        #consola { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; margin-top: 10px; border-top: 1px solid #222; padding-top: 10px; }
+        
+        .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 100; }
+        button { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.2s; font-size: 0.7rem; }
         .btn-run { background: var(--accent); color: white; }
-        .btn-export { background: #ffffff; color: #000; box-shadow: 0 4px 10px rgba(255,255,255,0.2); }
+        .btn-export { background: #ffffff; color: #000; }
         
-        #loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; align-items: center; justify-content: center; transition: 0.5s; }
-        .hidden { opacity: 0; pointer-events: none; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div id="loading-overlay">
-    <h2 style="color: var(--accent);">🐍 PyFactory Intelligence</h2>
-</div>
-
 <header>
-    <div style="font-weight:800;">🐍 Py<span>Factory</span></div>
-    <div id="status" style="font-size:0.7rem; color:var(--green);">● SISTEMA ACTIVO</div>
+    <div style="font-weight:800;">🐍 Py<span>Factory</span> <small style="opacity:0.4;">AI-FIX</small></div>
+    <div id="status" style="font-size:0.6rem; color:var(--green);">MOTOR ONLINE</div>
 </header>
 
 <main>
     <div class="editor-section">
-        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();"># Ejemplo con error
-x = 10
-if x > 5
-    print("Falta el dos puntos arriba")</textarea>
+        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();"># Provoca un error para probar
+x = 5
+if x > 2
+    print("Falta el dos puntos")</textarea>
         <pre id="highlighting" aria-hidden="true"><code class="language-python" id="highlighting-content"></code></pre>
     </div>
+    
     <div class="output-section">
-        <div id="diagnostico">Inicia el motor para analizar...</div>
+        <div id="diagnostico-container">
+            <div id="diag-text">Listo para analizar código...</div>
+            <button id="btn-corregir-ui">🔧 APLICAR CORRECCIÓN</button>
+        </div>
         <div id="consola">>>> Consola lista.</div>
     </div>
 </main>
 
 <div class="controls">
-    <button class="btn-export" onclick="exportarAppSeguro()">🚀 GENERAR HTML</button>
-    <button class="btn-run" id="btn-ejecutar">EJECUTAR Y CORREGIR</button>
+    <button class="btn-export" onclick="exportarAppSeguro()">🚀 EXPORTAR</button>
+    <button class="btn-run" id="btn-ejecutar">EJECUTAR Y ANALIZAR</button>
 </div>
 
 <script type="py">
 from pyscript import window, document, when
 import sys, io, traceback, ast
 
-document.getElementById("loading-overlay").classList.add("hidden")
+# Variables globales para guardar la solución propuesta
+propuesta_correccion = ""
 
-def sugerir_correccion(error_msg, linea_error):
-    # Diccionario de correcciones comunes
+def obtener_sugerencia_real(error_msg, linea_idx, codigo_full):
+    lineas = codigo_full.split('\n')
+    linea_actual = lineas[linea_idx]
+    
+    # Lógica de corrección automática
     if "expected ':'" in error_msg:
-        return f"SUGERENCIA: Agrega ':' al final de la línea {linea_error}."
-    if "unexpected indent" in error_msg:
-        return f"SUGERENCIA: Revisa los espacios al inicio de la línea {linea_error}."
-    if "is not defined" in error_msg:
-        var_name = error_msg.split("'")[1]
-        return f"SUGERENCIA: Asegúrate de haber definido la variable '{var_name}' antes de usarla."
-    return "SUGERENCIA: Revisa la sintaxis general cerca de esta línea."
+        lineas[linea_idx] = linea_actual.rstrip() + ":"
+        return "\n".join(lineas), "Faltaba un ':' al final."
+    
+    if "unexpected indent" in error_msg or "expected an indented block" in error_msg:
+        lineas[linea_idx] = "    " + linea_actual.lstrip()
+        return "\n".join(lineas), "Se ajustó la indentación (espacios)."
+    
+    return None, None
 
 @when("click", "#btn-ejecutar")
-def ejecutar_con_analisis(event):
+def procesar(event):
+    global propuesta_correccion
     codigo = document.getElementById("codigo").value
     consola = document.getElementById("consola")
-    diag = document.getElementById("diagnostico")
+    diag_text = document.getElementById("diag-text")
+    btn_fix = document.getElementById("btn-corregir-ui")
     
-    # 1. Análisis Previo
+    btn_fix.style.display = "none"
+    
     try:
         ast.parse(codigo)
-        diag.style.borderLeftColor = "#3dffa0"
-        diag.innerHTML = "<span style='color:#3dffa0'>✅ Código limpio de errores sintácticos.</span>"
+        diag_text.innerHTML = "<span style='color:var(--green)'>✅ Código perfecto. No requiere corrección.</span>"
     except SyntaxError as e:
-        diag.style.borderLeftColor = "#ff5e7a"
-        sugerencia = sugerir_correccion(e.msg, e.lineno)
-        diag.innerHTML = f"<span style='color:#ff5e7a'>❌ ERROR EN LÍNEA {e.lineno}:</span> {e.msg}\n<b style='color:#ffb86c'>{sugerencia}</b>"
-        return # Detenemos la ejecución si hay error grave
+        # Intentar generar solución
+        # e.lineno empieza en 1, ast usa base 1
+        nuevo_codigo, explicacion = obtener_sugerencia_real(e.msg, e.lineno - 1, codigo)
+        
+        if nuevo_codigo:
+            propuesta_correccion = nuevo_codigo
+            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR (Lín {e.lineno}): {e.msg}</span>\n<span style='color:var(--fix)'>💡 Sugerencia: {explicacion}</span>"
+            btn_fix.style.display = "block"
+        else:
+            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR: {e.msg}</span>"
+        return
 
-    # 2. Ejecución
+    # Ejecutar si no hay errores
     buffer = io.StringIO()
     sys.stdout = buffer
     try:
         exec(codigo, {})
-        consola.innerText = buffer.getvalue() or "✓ Ejecutado correctamente."
+        consola.innerText = buffer.getvalue() or "✓ Ejecución exitosa."
     except Exception:
         consola.innerText = traceback.format_exc()
     finally:
         sys.stdout = sys.__stdout__
+
+@when("click", "#btn-corregir-ui")
+def aplicar_fix(event):
+    global propuesta_correccion
+    if propuesta_correccion:
+        document.getElementById("codigo").value = propuesta_correccion
+        window.updateView() # Actualizar el resaltado de Prism
+        document.getElementById("diag-text").innerHTML = "<span style='color:var(--green)'>✨ ¡Corregido! Intenta ejecutar de nuevo.</span>"
+        document.getElementById("btn-corregir-ui").style.display = "none"
 </script>
 
 <script>
@@ -125,74 +151,21 @@ def ejecutar_con_analisis(event):
         const hi = document.getElementById('highlighting');
         hi.scrollTop = ed.scrollTop;
     }
-    updateView();
 
-    // --- FUNCIÓN DE EXPORTACIÓN REFORZADA PARA MÓVILES ---
     function exportarAppSeguro() {
         const pyCode = document.getElementById('codigo').value;
         const indent = pyCode.split('\n').map(l => '    ' + l).join('\n');
-        
-        const template = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Exportada</title>
-    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script>
-    <style>
-        body { background: #08080a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: #121217; padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #2a2a35; border-top: 5px solid #7c6aff; width: 280px; }
-        #out { background: #000; padding: 15px; border-radius: 10px; margin-top: 15px; color: #3dffa0; font-family: monospace; font-size: 0.8rem; min-height: 40px; text-align: left; }
-        button { background: #7c6aff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h3>App Lista</h3>
-        <div id="out">>>></div>
-        <button id="b">EJECUTAR</button>
-    </div>
-    <script type="py">
-from pyscript import when, document
-import sys, io
-@when("click", "#b")
-def main(e):
-    out = document.querySelector("#out")
-    buf = io.StringIO()
-    sys.stdout = buf
-    try:
-${indent}
-        res = buf.getvalue()
-        out.innerText = res if res else "✓ Hecho"
-    except Exception as err:
-        out.innerText = str(err)
-<\/script>
-</body>
-</html>`;
+        const template = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script><style>body{background:#08080a;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.card{background:#121217;padding:25px;border-radius:20px;text-align:center;border:1px solid #2a2a35;border-top:5px solid #7c6aff;width:260px}#out{background:#000;padding:15px;border-radius:10px;margin-top:15px;color:#3dffa0;font-family:monospace;font-size:0.8rem;min-height:40px;text-align:left}button{background:#7c6aff;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:15px;width:100%}<\/style><\/head><body><div class="card"><h3>App Lista<\/h3><div id="out">>>> Cargando motor...<\/div><button id="b">EJECUTAR<\/button><\/div><script type="py">from pyscript import when, document\nimport sys, io\ndocument.querySelector("#out").innerText=">>> Listo"\n@when("click", "#b")\ndef main(e):\n    out=document.querySelector("#out")\n    buf=io.StringIO()\n    sys.stdout=buf\n    try:\n${indent}\n        res=buf.getvalue()\n        out.innerText=res if res else "✓ Hecho"\n    except Exception as err: out.innerText=str(err)\n<\/script><\/body><\/html>`;
 
-        try {
-            const blob = new Blob([template], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            
-            // Forzar descarga en Android/Chrome
-            a.style.display = 'none';
-            a.href = url;
-            a.setAttribute('download', 'mi_app_python.html');
-            
-            document.body.appendChild(a);
-            a.click();
-            
-            // Limpieza inmediata
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            }, 100);
-            
-            alert("¡Archivo generado! Revisa tus descargas.");
-        } catch (e) {
-            alert("Error al exportar: " + e.message);
-        }
+        const blob = new Blob([template], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "mi_app_inteligente.html";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     }
 </script>
 </body>
