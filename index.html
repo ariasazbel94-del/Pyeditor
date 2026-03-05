@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyFactory Intelligence — Auto-Fix Edition</title>
+    <title>PyFactory Intelligence — Auto-Fix</title>
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -26,15 +26,17 @@
         
         .output-section { flex: 0.8; background: #000; padding: 15px; overflow-y: auto; border-top: 1px solid var(--border); }
         
-        /* Estilo del Panel de Diagnóstico con Botón */
+        /* Panel de Diagnóstico dinámico */
         #diagnostico-container { background: #1a1a24; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px; }
         #diag-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; }
-        #btn-corregir-ui { display: none; background: var(--fix); color: black; border: none; padding: 8px 12px; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 10px; align-self: flex-start; text-transform: uppercase; }
+        
+        /* El Botón de Corregir */
+        #btn-corregir-ui { display: none; background: var(--fix); color: black; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 11px; align-self: flex-start; text-transform: uppercase; margin-top: 5px; }
         
         #consola { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; margin-top: 10px; border-top: 1px solid #222; padding-top: 10px; }
         
         .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 100; }
-        button { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.2s; font-size: 0.7rem; }
+        button.action-btn { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.2s; font-size: 0.7rem; }
         .btn-run { background: var(--accent); color: white; }
         .btn-export { background: #ffffff; color: #000; }
         
@@ -51,8 +53,8 @@
 <main>
     <div class="editor-section">
         <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();"># Provoca un error para probar
-x = 5
-if x > 2
+x = 10
+if x > 5
     print("Falta el dos puntos")</textarea>
         <pre id="highlighting" aria-hidden="true"><code class="language-python" id="highlighting-content"></code></pre>
     </div>
@@ -67,64 +69,64 @@ if x > 2
 </main>
 
 <div class="controls">
-    <button class="btn-export" onclick="exportarAppSeguro()">🚀 EXPORTAR</button>
-    <button class="btn-run" id="btn-ejecutar">EJECUTAR Y ANALIZAR</button>
+    <button class="action-btn btn-export" onclick="exportarAppSeguro()">🚀 GENERAR HTML</button>
+    <button class="action-btn btn-run" id="btn-ejecutar">EJECUTAR Y ANALIZAR</button>
 </div>
 
 <script type="py">
 from pyscript import window, document, when
 import sys, io, traceback, ast
 
-# Variables globales para guardar la solución propuesta
-propuesta_correccion = ""
+# Guardamos la versión corregida globalmente
+solucion_actual = ""
 
-def obtener_sugerencia_real(error_msg, linea_idx, codigo_full):
-    lineas = codigo_full.split('\n')
-    linea_actual = lineas[linea_idx]
+def generar_fix(error_msg, linea_idx, texto_completo):
+    lineas = texto_completo.split('\n')
+    linea_con_problema = lineas[linea_idx]
     
-    # Lógica de corrección automática
+    # Caso 1: Falta de dos puntos (el error que tienes en la foto)
     if "expected ':'" in error_msg:
-        lineas[linea_idx] = linea_actual.rstrip() + ":"
-        return "\n".join(lineas), "Faltaba un ':' al final."
+        lineas[linea_idx] = linea_con_problema.rstrip() + ":"
+        return "\n".join(lineas), "Se añadió ':' al final de la línea."
     
-    if "unexpected indent" in error_msg or "expected an indented block" in error_msg:
-        lineas[linea_idx] = "    " + linea_actual.lstrip()
-        return "\n".join(lineas), "Se ajustó la indentación (espacios)."
-    
+    # Caso 2: Error de indentación
+    if "indent" in error_msg:
+        lineas[linea_idx] = "    " + linea_con_problema.lstrip()
+        return "\n".join(lineas), "Se corrigieron los espacios (indentación)."
+        
     return None, None
 
 @when("click", "#btn-ejecutar")
 def procesar(event):
-    global propuesta_correccion
+    global solucion_actual
     codigo = document.getElementById("codigo").value
     consola = document.getElementById("consola")
     diag_text = document.getElementById("diag-text")
     btn_fix = document.getElementById("btn-corregir-ui")
     
-    btn_fix.style.display = "none"
+    btn_fix.style.display = "none" # Ocultar botón de fix por defecto
     
     try:
         ast.parse(codigo)
-        diag_text.innerHTML = "<span style='color:var(--green)'>✅ Código perfecto. No requiere corrección.</span>"
+        diag_text.innerHTML = "<span style='color:var(--green)'>✅ Código analizado: Todo correcto.</span>"
     except SyntaxError as e:
-        # Intentar generar solución
-        # e.lineno empieza en 1, ast usa base 1
-        nuevo_codigo, explicacion = obtener_sugerencia_real(e.msg, e.lineno - 1, codigo)
+        # Intentamos generar la solución
+        nuevo_codigo, desc = generar_fix(e.msg, e.lineno - 1, codigo)
         
         if nuevo_codigo:
-            propuesta_correccion = nuevo_codigo
-            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR (Lín {e.lineno}): {e.msg}</span>\n<span style='color:var(--fix)'>💡 Sugerencia: {explicacion}</span>"
-            btn_fix.style.display = "block"
+            solucion_actual = nuevo_codigo
+            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR (Lín {e.lineno}): {e.msg}</span>\n<span style='color:var(--fix)'>💡 Sugerencia: {desc}</span>"
+            btn_fix.style.display = "block" # MOSTRAMOS EL BOTÓN
         else:
-            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR: {e.msg}</span>"
+            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR: {e.msg} (Lín {e.lineno})</span>"
         return
 
-    # Ejecutar si no hay errores
+    # Si todo está bien, ejecutar
     buffer = io.StringIO()
     sys.stdout = buffer
     try:
         exec(codigo, {})
-        consola.innerText = buffer.getvalue() or "✓ Ejecución exitosa."
+        consola.innerText = buffer.getvalue() or "✓ Programa ejecutado sin problemas."
     except Exception:
         consola.innerText = traceback.format_exc()
     finally:
@@ -132,11 +134,11 @@ def procesar(event):
 
 @when("click", "#btn-corregir-ui")
 def aplicar_fix(event):
-    global propuesta_correccion
-    if propuesta_correccion:
-        document.getElementById("codigo").value = propuesta_correccion
-        window.updateView() # Actualizar el resaltado de Prism
-        document.getElementById("diag-text").innerHTML = "<span style='color:var(--green)'>✨ ¡Corregido! Intenta ejecutar de nuevo.</span>"
+    global solucion_actual
+    if solucion_actual:
+        document.getElementById("codigo").value = solucion_actual
+        window.updateView() # Refrescar colores del editor
+        document.getElementById("diag-text").innerHTML = "<span style='color:var(--green)'>✨ ¡Código reparado! Ya puedes ejecutarlo.</span>"
         document.getElementById("btn-corregir-ui").style.display = "none"
 </script>
 
@@ -155,13 +157,13 @@ def aplicar_fix(event):
     function exportarAppSeguro() {
         const pyCode = document.getElementById('codigo').value;
         const indent = pyCode.split('\n').map(l => '    ' + l).join('\n');
-        const template = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script><style>body{background:#08080a;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.card{background:#121217;padding:25px;border-radius:20px;text-align:center;border:1px solid #2a2a35;border-top:5px solid #7c6aff;width:260px}#out{background:#000;padding:15px;border-radius:10px;margin-top:15px;color:#3dffa0;font-family:monospace;font-size:0.8rem;min-height:40px;text-align:left}button{background:#7c6aff;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:15px;width:100%}<\/style><\/head><body><div class="card"><h3>App Lista<\/h3><div id="out">>>> Cargando motor...<\/div><button id="b">EJECUTAR<\/button><\/div><script type="py">from pyscript import when, document\nimport sys, io\ndocument.querySelector("#out").innerText=">>> Listo"\n@when("click", "#b")\ndef main(e):\n    out=document.querySelector("#out")\n    buf=io.StringIO()\n    sys.stdout=buf\n    try:\n${indent}\n        res=buf.getvalue()\n        out.innerText=res if res else "✓ Hecho"\n    except Exception as err: out.innerText=str(err)\n<\/script><\/body><\/html>`;
+        const template = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script><style>body{background:#08080a;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}.card{background:#121217;padding:25px;border-radius:20px;text-align:center;border:1px solid #2a2a35;border-top:5px solid #7c6aff;width:280px}#out{background:#000;padding:15px;border-radius:10px;margin-top:15px;color:#3dffa0;font-family:monospace;font-size:0.8rem;min-height:40px;text-align:left}button{background:#7c6aff;color:white;border:none;padding:12px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:15px;width:100%}<\/style><\/head><body><div class="card"><h3>App Exportada<\/h3><div id="out">>>> Listo<\/div><button id="b">EJECUTAR<\/button><\/div><script type="py">from pyscript import when, document\nimport sys, io\n@when("click", "#b")\ndef main(e):\n    out=document.querySelector("#out")\n    buf=io.StringIO()\n    sys.stdout=buf\n    try:\n${indent}\n        res=buf.getvalue()\n        out.innerText=res if res else "✓ Hecho"\n    except Exception as err: out.innerText=str(err)\n<\/script><\/body><\/html>`;
 
         const blob = new Blob([template], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = "mi_app_inteligente.html";
+        a.download = "mi_herramienta_python.html";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
