@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyFactory Ultra — GitHub Fix</title>
+    <title>PyFactory Ultra — Versión Final</title>
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -20,11 +20,13 @@
         header { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface); height: 50px; }
         main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
         .editor-section { flex: 1.2; position: relative; background: var(--surface); }
-        #codigo, #highlighting { margin: 0; padding: 20px; border: 0; width: 100%; height: 100%; font-family: 'JetBrains Mono', monospace; font-size: 14px; position: absolute; top: 0; left: 0; box-sizing: border-box; }
-        #codigo { color: transparent; background: transparent; caret-color: white; z-index: 1; resize: none; outline: none; white-space: pre; }
+        #codigo, #highlighting { margin: 0; padding: 20px; border: 0; width: 100%; height: 100%; font-family: 'JetBrains Mono', monospace; font-size: 14px; position: absolute; top: 0; left: 0; box-sizing: border-box; tab-size: 4; }
+        #codigo { color: transparent; background: transparent; caret-color: white; z-index: 1; resize: none; outline: none; white-space: pre; overflow: auto; }
         #highlighting { z-index: 0; pointer-events: none; white-space: pre; overflow: hidden; }
         .output-section { flex: 0.8; background: #000; padding: 20px; overflow-y: auto; border-top: 1px solid var(--border); }
         #consola { color: var(--green); white-space: pre-wrap; font-size: 12px; font-family: 'JetBrains Mono'; }
+        .app-settings { background: var(--surface); padding: 10px 20px; display: flex; gap: 15px; align-items: center; border-bottom: 1px solid var(--border); font-size: 0.8rem; flex-wrap: wrap; }
+        .app-settings input { background: #1c1c24; border: 1px solid var(--border); color: white; padding: 5px 10px; border-radius: 4px; }
         .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; }
         button { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.3s; }
         .btn-run { background: var(--accent); color: white; }
@@ -37,7 +39,7 @@
 
 <div id="loading-overlay">
     <h2 style="color: var(--accent);">🐍 PyFactory Ultra</h2>
-    <p id="loading-msg" style="font-family: monospace; font-size: 0.8rem;">Iniciando motor Python...</p>
+    <p style="font-family: monospace; font-size: 0.8rem;">Iniciando motor Python...</p>
 </div>
 
 <header>
@@ -45,13 +47,21 @@
     <div id="status" style="font-size:0.7rem; color:var(--green);">● STANDBY</div>
 </header>
 
+<div class="app-settings">
+    <span>Nombre App:</span>
+    <input type="text" id="app_name" value="Mi App Python">
+    <span>Color:</span>
+    <input type="text" id="app_color" value="#7c6aff">
+</div>
+
 <main>
     <div class="editor-section">
-        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();">print("¡Hola desde mi Fábrica!")</textarea>
+        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();">print("¡Hola Mundo!")
+# Prueba tu código aquí</textarea>
         <pre id="highlighting" aria-hidden="true"><code class="language-python" id="highlighting-content"></code></pre>
     </div>
     <div class="output-section">
-        <div id="consola">>>> Consola lista.</div>
+        <div id="consola">>>> Listo para programar.</div>
     </div>
 </main>
 
@@ -64,7 +74,6 @@
 from pyscript import window, document, when
 import sys, io, traceback
 
-# Quitar pantalla de carga
 document.getElementById("loading-overlay").classList.add("hidden")
 document.getElementById("status").innerText = "● MOTOR LISTO"
 
@@ -76,7 +85,7 @@ def ejecutar(event):
     sys.stdout = buffer
     try:
         exec(codigo, {})
-        consola.innerText = buffer.getvalue() or "✓ Ejecución finalizada"
+        consola.innerText = buffer.getvalue() or "✓ Ejecutado correctamente"
     except Exception:
         consola.innerText = traceback.format_exc()
     finally:
@@ -99,34 +108,58 @@ def ejecutar(event):
 
     function exportarApp() {
         const pyCode = document.getElementById('codigo').value;
+        const name = document.getElementById('app_name').value;
+        const color = document.getElementById('app_color').value;
         const indent = pyCode.split('\n').map(l => '    ' + l).join('\n');
         
         const template = `<!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${name}</title>
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script>
     <style>
         body { background: #08080a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: #121217; padding: 30px; border-radius: 20px; text-align: center; border: 1px solid #2a2a35; border-top: 5px solid #7c6aff; width: 280px; }
-        #res { background: #000; padding: 15px; border-radius: 10px; margin-top: 20px; color: #3dffa0; font-family: monospace; font-size: 0.8rem; min-height: 40px; text-align: left; }
-        button { background: #7c6aff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; width: 100%; }
+        .card { background: #121217; padding: 30px; border-radius: 20px; text-align: center; border: 1px solid #2a2a35; border-top: 5px solid ${color}; width: 280px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        #res { background: #000; padding: 15px; border-radius: 10px; margin-top: 20px; color: #3dffa0; font-family: monospace; font-size: 0.8rem; min-height: 50px; text-align: left; white-space: pre-wrap; border: 1px solid #334155; }
+        button { background: ${color}; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px; width: 100%; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
     <div class="card">
-        <h3>App Exportada</h3>
-        <div id="res">>>> Listo</div>
+        <h2 style="margin:0;">${name}</h2>
+        <div id="res">Cargando motor Python...</div>
         <button id="btn">EJECUTAR</button>
     </div>
     <script type="py">
 from pyscript import when, document
+import sys, io
+
+# Aviso de carga lista
+document.querySelector("#res").innerText = ">>> Sistema listo."
+
 @when("click", "#btn")
 def main(e):
-    # Lógica del usuario
+    out = document.querySelector("#res")
+    out.innerText = "Procesando..."
+    
+    buf = io.StringIO()
+    sys.stdout = buf
+    
+    try:
+        # --- CÓDIGO DEL USUARIO ---
 ${indent}
-    document.querySelector("#res").innerText = "Procesado con éxito."
+        # --------------------------
+        
+        # Mostramos lo que el usuario imprimió con print()
+        salida = buf.getvalue()
+        out.innerText = salida if salida else "✓ Tarea completada"
+    except Exception as err:
+        out.innerText = f"Error: {str(err)}"
+    finally:
+        sys.stdout = sys.__stdout__
 <\/script>
 </body>
 </html>`;
@@ -135,10 +168,11 @@ ${indent}
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = "mi_app_python.html";
+        a.download = name.toLowerCase().replace(/\s+/g, '_') + ".html";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 </script>
 </body>
