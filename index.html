@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyFactory Ultra — GitHub Fix</title>
+    
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --bg: #08080a; --surface: #121217; --border: #2a2a35; --accent: #7c6aff; --green: #3dffa0; --text: #e8e8f0; }
+        body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface); height: 50px; }
+        main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+        .editor-section { flex: 1.2; position: relative; background: var(--surface); }
+        #codigo, #highlighting { margin: 0; padding: 20px; border: 0; width: 100%; height: 100%; font-family: 'JetBrains Mono', monospace; font-size: 14px; position: absolute; top: 0; left: 0; box-sizing: border-box; }
+        #codigo { color: transparent; background: transparent; caret-color: white; z-index: 1; resize: none; outline: none; white-space: pre; }
+        #highlighting { z-index: 0; pointer-events: none; white-space: pre; overflow: hidden; }
+        .output-section { flex: 0.8; background: #000; padding: 20px; overflow-y: auto; border-top: 1px solid var(--border); }
+        #consola { color: var(--green); white-space: pre-wrap; font-size: 12px; font-family: 'JetBrains Mono'; }
+        .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; }
+        button { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.3s; }
+        .btn-run { background: var(--accent); color: white; }
+        .btn-export { background: #ffffff; color: #000; }
+        #loading-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.5s; }
+        .hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+    <h2 style="color: var(--accent);">🐍 PyFactory Ultra</h2>
+    <p id="loading-msg" style="font-family: monospace; font-size: 0.8rem;">Iniciando motor Python...</p>
+</div>
+
+<header>
+    <div style="font-weight:800;">🐍 Py<span>Factory</span></div>
+    <div id="status" style="font-size:0.7rem; color:var(--green);">● STANDBY</div>
+</header>
+
+<main>
+    <div class="editor-section">
+        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();">print("¡Hola desde mi Fábrica!")</textarea>
+        <pre id="highlighting" aria-hidden="true"><code class="language-python" id="highlighting-content"></code></pre>
+    </div>
+    <div class="output-section">
+        <div id="consola">>>> Consola lista.</div>
+    </div>
+</main>
+
+<div class="controls">
+    <button class="btn-export" onclick="exportarApp()">🚀 GENERAR HTML</button>
+    <button class="btn-run" id="btn-ejecutar">EJECUTAR</button>
+</div>
+
+<script type="py">
+from pyscript import window, document, when
+import sys, io, traceback
+
+# Quitar pantalla de carga
+document.getElementById("loading-overlay").classList.add("hidden")
+document.getElementById("status").innerText = "● MOTOR LISTO"
+
+@when("click", "#btn-ejecutar")
+def ejecutar(event):
+    codigo = document.getElementById("codigo").value
+    consola = document.getElementById("consola")
+    buffer = io.StringIO()
+    sys.stdout = buffer
+    try:
+        exec(codigo, {})
+        consola.innerText = buffer.getvalue() or "✓ Ejecución finalizada"
+    except Exception:
+        consola.innerText = traceback.format_exc()
+    finally:
+        sys.stdout = sys.__stdout__
+</script>
+
+<script>
+    function updateView() {
+        const code = document.getElementById('codigo').value;
+        document.getElementById('highlighting-content').textContent = code;
+        Prism.highlightElement(document.getElementById('highlighting-content'));
+    }
+    function syncScroll() {
+        const ed = document.getElementById('codigo');
+        const hi = document.getElementById('highlighting');
+        hi.scrollTop = ed.scrollTop;
+        hi.scrollLeft = ed.scrollLeft;
+    }
+    updateView();
+
+    function exportarApp() {
+        const pyCode = document.getElementById('codigo').value;
+        const indent = pyCode.split('\n').map(l => '    ' + l).join('\n');
+        
+        const template = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script>
+    <style>
+        body { background: #08080a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #121217; padding: 30px; border-radius: 20px; text-align: center; border: 1px solid #2a2a35; border-top: 5px solid #7c6aff; width: 280px; }
+        #res { background: #000; padding: 15px; border-radius: 10px; margin-top: 20px; color: #3dffa0; font-family: monospace; font-size: 0.8rem; min-height: 40px; text-align: left; }
+        button { background: #7c6aff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>App Exportada</h3>
+        <div id="res">>>> Listo</div>
+        <button id="btn">EJECUTAR</button>
+    </div>
+    <script type="py">
+from pyscript import when, document
+@when("click", "#btn")
+def main(e):
+    # Lógica del usuario
+${indent}
+    document.querySelector("#res").innerText = "Procesado con éxito."
+<\/script>
+</body>
+</html>`;
+
+        const blob = new Blob([template], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "mi_app_python.html";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+</script>
+</body>
+</html>
