@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PyFactory Intelligence — Fix Packager</title>
+    <title>PyFactory Intelligence — URL Fix</title>
     
     <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
@@ -18,17 +18,20 @@
         body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         header { padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface); height: 50px; }
         main { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+        
         .editor-section { flex: 1.2; position: relative; background: var(--surface); }
         #codigo, #highlighting { margin: 0; padding: 20px; border: 0; width: 100%; height: 100%; font-family: 'JetBrains Mono', monospace; font-size: 14px; position: absolute; top: 0; left: 0; box-sizing: border-box; tab-size: 4; }
         #codigo { color: transparent; background: transparent; caret-color: white; z-index: 1; resize: none; outline: none; white-space: pre; overflow: auto; }
         #highlighting { z-index: 0; pointer-events: none; white-space: pre; overflow: hidden; }
+        
         .output-section { flex: 0.8; background: #000; padding: 15px; overflow-y: auto; border-top: 1px solid var(--border); }
         #diagnostico-container { background: #1a1a24; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px; }
-        #diag-text { font-family: 'JetBrains Mono', monospace; font-size: 11px; white-space: pre-wrap; }
-        #btn-corregir-ui { display: none; background: var(--fix); color: black; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 10px; align-self: flex-start; }
-        #consola { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 11px; white-space: pre-wrap; margin-top: 10px; }
+        #diag-text { font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; }
+        #btn-corregir-ui { display: none; background: var(--fix); color: black; border: none; padding: 10px 15px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 11px; align-self: flex-start; text-transform: uppercase; }
+        #consola { color: var(--green); font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap; margin-top: 10px; border-top: 1px solid #222; padding-top: 10px; }
+        
         .controls { position: fixed; bottom: 20px; right: 20px; display: flex; gap: 8px; z-index: 100; }
-        button.action-btn { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; font-size: 0.7rem; }
+        button.action-btn { padding: 12px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; font-family: 'Syne'; transition: 0.2s; font-size: 0.7rem; }
         .btn-run { background: var(--accent); color: white; }
         .btn-export { background: #ffffff; color: #000; }
     </style>
@@ -36,35 +39,35 @@
 <body>
 
 <header>
-    <div style="font-weight:800;">🐍 Py<span>Factory</span></div>
-    <div id="status" style="font-size:0.6rem; color:var(--green);">MOTOR LISTO</div>
+    <div style="font-weight:800;">🐍 Py<span>Factory</span> <small style="opacity:0.4;">V3-FIX</small></div>
+    <div id="status" style="font-size:0.6rem; color:var(--green);">MOTOR ONLINE</div>
 </header>
 
 <main>
     <div class="editor-section">
-        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();">from pyodide.http import pyfetch
+        <textarea id="codigo" spellcheck="false" oninput="updateView();" onscroll="syncScroll();"># Código listo para exportar
+from pyodide.http import pyfetch
 import asyncio
 
-async def test():
-    print("Revisando red...")
-    res = await pyfetch('https://pyscript.net')
-    print(f"Status: {res.status}")
+async def verificar():
+    print("Iniciando prueba...")
+    # Tu lógica aquí
 
-await test()</textarea>
+await verificar()</textarea>
         <pre id="highlighting" aria-hidden="true"><code class="language-python" id="highlighting-content"></code></pre>
     </div>
     
     <div class="output-section">
         <div id="diagnostico-container">
-            <div id="diag-text">Analizador preparado...</div>
-            <button id="btn-corregir-ui">🔧 CORREGIR AHORA</button>
+            <div id="diag-text">Listo.</div>
+            <button id="btn-corregir-ui">🔧 CORREGIR</button>
         </div>
-        <div id="consola">>>> Consola</div>
+        <div id="consola">>>></div>
     </div>
 </main>
 
 <div class="controls">
-    <button class="action-btn btn-export" onclick="exportarAppSeguro()">🚀 GENERAR HTML</button>
+    <button class="action-btn btn-export" onclick="exportarURL()">🚀 GENERAR APP</button>
     <button class="action-btn btn-run" id="btn-ejecutar">EJECUTAR</button>
 </div>
 
@@ -76,15 +79,14 @@ solucion_actual = ""
 
 def generar_fix(error_msg, linea_idx, texto_completo):
     lineas = texto_completo.split('\n')
-    if linea_idx >= len(lineas): linea_idx = len(lineas) - 1
-    linea_con_problema = lineas[linea_idx]
-    
+    if linea_idx >= len(lineas): linea_idx = len(lineas)-1
+    linea = lineas[linea_idx]
     if "expected ':'" in error_msg:
-        lineas[linea_idx] = linea_con_problema.rstrip() + ":"
-        return "\n".join(lineas), "Añadido ':' faltante."
+        lineas[linea_idx] = linea.rstrip() + ":"
+        return "\n".join(lineas), "Faltaba ':'"
     if "indent" in error_msg:
-        lineas[linea_idx] = "    " + linea_con_problema.lstrip()
-        return "\n".join(lineas), "Ajustada la indentación."
+        lineas[linea_idx] = "    " + linea.lstrip()
+        return "\n".join(lineas), "Error de espacios"
     return None, None
 
 @when("click", "#btn-ejecutar")
@@ -92,29 +94,26 @@ def procesar(event):
     global solucion_actual
     codigo = document.getElementById("codigo").value
     consola = document.getElementById("consola")
-    diag_text = document.getElementById("diag-text")
+    diag = document.getElementById("diag-text")
     btn_fix = document.getElementById("btn-corregir-ui")
     btn_fix.style.display = "none"
     
     try:
         ast.parse(codigo)
-        diag_text.innerHTML = "<span style='color:var(--green)'>✅ Estructura correcta.</span>"
+        diag.innerHTML = "<span style='color:var(--green)'>✅ Código Válido</span>"
     except SyntaxError as e:
-        nuevo_codigo, desc = generar_fix(e.msg, e.lineno - 1, codigo)
-        if nuevo_codigo:
-            solucion_actual = nuevo_codigo
-            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR: {e.msg}</span>\n<span style='color:var(--fix)'>💡 {desc}</span>"
+        nuevo, desc = generar_fix(e.msg, e.lineno-1, codigo)
+        if nuevo:
+            solucion_actual = nuevo
+            diag.innerHTML = f"<span style='color:var(--error)'>❌ {e.msg}</span>\n<span style='color:var(--fix)'>💡 {desc}</span>"
             btn_fix.style.display = "block"
-        else:
-            diag_text.innerHTML = f"<span style='color:var(--error)'>❌ ERROR: {e.msg}</span>"
         return
 
-    buffer = io.StringIO()
-    sys.stdout = buffer
+    buf = io.StringIO()
+    sys.stdout = buf
     try:
-        # Usamos eval para soportar await en el nivel superior si es posible
         exec(codigo, {})
-        consola.innerText = buffer.getvalue() or "✓ Ejecutado"
+        consola.innerText = buf.getvalue() or "✓ Ejecutado"
     except Exception:
         consola.innerText = traceback.format_exc()
     finally:
@@ -122,7 +121,6 @@ def procesar(event):
 
 @when("click", "#btn-corregir-ui")
 def aplicar_fix(event):
-    global solucion_actual
     if solucion_actual:
         document.getElementById("codigo").value = solucion_actual
         window.updateView()
@@ -141,12 +139,11 @@ def aplicar_fix(event):
         hi.scrollTop = ed.scrollTop;
     }
 
-    function exportarAppSeguro() {
+    function exportarURL() {
         const pyCode = document.getElementById('codigo').value;
         
-        // CORRECCIÓN CRUCIAL: Limpiamos espacios y forzamos indentación correcta para el bloque try
-        const lineas = pyCode.split('\n');
-        const codigoIdentado = lineas.map(linea => '        ' + linea).join('\n');
+        // Convertimos el código a Base64 para que no se rompa la indentación
+        const encodedCode = btoa(unescape(encodeURIComponent(pyCode)));
 
         const template = `<!DOCTYPE html>
 <html>
@@ -155,38 +152,37 @@ def aplicar_fix(event):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"><\/script>
     <style>
-        body { background: #08080a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        .card { background: #121217; padding: 20px; border-radius: 20px; text-align: center; border: 1px solid #2a2a35; border-top: 5px solid #7c6aff; width: 90%; max-width: 320px; box-sizing: border-box; }
-        #out { background: #000; padding: 15px; border-radius: 10px; margin-top: 15px; color: #3dffa0; font-family: monospace; font-size: 0.75rem; min-height: 80px; text-align: left; overflow-x: auto; white-space: pre-wrap; word-break: break-all; border: 1px solid #222; }
-        button { background: #7c6aff; color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 15px; width: 100%; }
+        body { background: #08080a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #121217; padding: 25px; border-radius: 20px; text-align: center; border: 1px solid #2a2a35; border-top: 5px solid #7c6aff; width: 300px; }
+        #out { background: #000; padding: 15px; border-radius: 10px; margin: 15px 0; color: #3dffa0; font-family: monospace; font-size: 0.8rem; min-height: 60px; text-align: left; white-space: pre-wrap; word-break: break-all; border: 1px solid #333; }
+        button { background: #7c6aff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h3 style="margin-top:0">App Ejecutable</h3>
-        <div id="out">>>> Cargando motor...</div>
-        <button id="b">EJECUTAR CÓDIGO</button>
+        <h3>App Factory</h3>
+        <div id="out">>>> Cargando...</div>
+        <button id="b">EJECUTAR</button>
     </div>
     <script type="py">
 from pyscript import when, document
-import sys, io
+import sys, io, base64
 
-document.querySelector("#out").innerText = ">>> Listo para usar"
+document.querySelector("#out").innerText = ">>> Lista"
 
 @when("click", "#b")
-async def main(event):
+async def main(e):
     out = document.querySelector("#out")
-    out.innerText = "Procesando..."
+    out.innerText = "Corriendo..."
     buf = io.StringIO()
     sys.stdout = buf
     try:
-        # Código inyectado con indentación garantizada
-${codigoIdentado}
-        
-        res_print = buf.getvalue()
-        out.innerText = res_print if res_print else "✓ Ejecución finalizada"
-    except Exception as e:
-        out.innerText = f"Error:\\n{str(e)}"
+        # Decodificamos el código original exactamente como se escribió
+        raw_code = base64.b64decode("${encodedCode}").decode("utf-8")
+        exec(raw_code, {})
+        out.innerText = buf.getvalue() or "✓ Terminado"
+    except Exception as err:
+        out.innerText = f"Error:\\n{str(err)}"
     finally:
         sys.stdout = sys.__stdout__
 <\/script>
@@ -197,11 +193,13 @@ ${codigoIdentado}
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = "mi_herramienta.html";
+        a.download = "mi_app_protegida.html";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+        
+        alert("¡App generada sin errores de indentación!");
     }
 </script>
 </body>
